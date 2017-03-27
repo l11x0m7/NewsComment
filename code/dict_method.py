@@ -16,8 +16,38 @@ from sklearn.metrics import roc_auc_score, confusion_matrix
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import KFold
 
-cutter = thulac.thulac(T2S=True, seg_only=True, filt=True)
+cutter = thulac.thulac(T2S=True, seg_only=True)
 
+# 获取字典内容，包括否定词、程度词、情感词
+def stop_words_parser():
+    # 停用词：融合网络停用词、哈工大停用词、川大停用词
+    stop_words = set()
+    with open(u'../dict/stopwords/中文停用词库.txt') as fr:
+        for line in fr:
+            item = line.strip().decode()
+            stop_words.add(item)
+    with open(u'../dict/stopwords/哈工大停用词表.txt') as fr:
+        for line in fr:
+            item = line.strip().decode()
+            stop_words.add(item)
+    with open(u'../dict/stopwords/四川大学机器智能实验室停用词库.txt') as fr:
+        for line in fr:
+            item = line.strip().decode()
+            stop_words.add(item)
+    with open(u'../dict/stopwords/百度停用词列表.txt') as fr:
+        for line in fr:
+            item = line.strip().decode()
+            stop_words.add(item)
+    with open(u'../dict/stopwords/stopwords_net.txt') as fr:
+        for line in fr:
+            item = line.strip().decode()
+            stop_words.add(item)
+    with open(u'../dict/stopwords/stopwords_net2.txt') as fr:
+        for line in fr:
+            item = line.strip().decode()
+            stop_words.add(item)
+
+    return stop_words
 
 # 解析大连理工大学的情感词汇数据
 def dut_parser():
@@ -108,6 +138,7 @@ class TraditionModel():
 
 
     def preprocess(self, filepath):
+        stop_words = stop_words_parser()
         cleaned_data = list()
         with open(filepath, 'rb') as fr:
             for line in fr:
@@ -121,7 +152,13 @@ class TraditionModel():
                 if words in ([''], [' ']):
                     continue
                 words = map(lambda kk: kk.decode(), words)
-                cleaned_data.append(' '.join(words) + '\t' + label)
+                cleaned_words = list()
+                for word in words:
+                    if word not in stop_words:
+                        cleaned_words.append(word)
+                if len(cleaned_words) < 1:
+                    continue
+                cleaned_data.append(' '.join(cleaned_words) + '\t' + label)
         return cleaned_data
 
     def get_seed_words(self, ws_data):
@@ -168,7 +205,7 @@ class TraditionModel():
             for word in words:
                 if word in self.pos_seed_words:
                     seed_feature[0] += 1
-                elif word in self.neg_seed_words:
+                if word in self.neg_seed_words:
                     seed_feature[1] += 1
 
                 for i in xrange(len(dicts)):
